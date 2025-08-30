@@ -3,6 +3,9 @@ rank_score: 2.8284271247461903
 original_image: s227.png
 overlay_image:  overlay_circles.png
 gaps_image:     gaps_debug.png
+binary_image:   gaps_debug_binary.png
+profiles_image: gaps_debug_profiles.png
+binary_threshold_ratio: 0.650
 
 ## CSV row fields
 path: s227.png
@@ -22,8 +25,5 @@ iou: 0.9345558361699792
 success: 1
 
 ## Landolt rings (outer → inner)
-r=37.9px : empty_hours=6
-r=33.4px : empty_hours=6
-r=21.4px : empty_hours=10
-r=15.4px : empty_hours=2
-r=7.9px : empty_hours=11
+r=26.6px : empty_hours=6
+r=10.0px : empty_hours=10

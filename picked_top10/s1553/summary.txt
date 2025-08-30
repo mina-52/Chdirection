@@ -1,8 +1,11 @@
-# Summary for s1553.png (rank #2)
+# Summary for s1553.png (rank #3)
 rank_score: 2.0
 original_image: s1553.png
 overlay_image:  overlay_circles.png
 gaps_image:     gaps_debug.png
+binary_image:   gaps_debug_binary.png
+profiles_image: gaps_debug_profiles.png
+binary_threshold_ratio: 0.650
 
 ## CSV row fields
 path: s1553.png
@@ -22,8 +25,5 @@ iou: 0.9603305785123968
 success: 1
 
 ## Landolt rings (outer → inner)
-r=55.4px : empty_hours=5
-r=46.6px : empty_hours=5
-r=39.5px : empty_hours=5
-r=27.1px : empty_hours=10
-r=18.3px : empty_hours=5
+r=31.7px : empty_hours=6
+r=11.9px : empty_hours=-
