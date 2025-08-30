@@ -1,0 +1,29 @@
+# Summary for s178.png (rank #9)
+rank_score: 3.414213562373095
+original_image: s178.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s178.png
+W: 480
+H: 480
+gt_x: 137
+gt_y: 127
+gt_r: 53
+pr_x: 138
+pr_y: 126
+pr_r: 51
+center_err_px: 1.4142135623730951
+radius_err_px: 2.0
+center_err_rel_r: 0.0266832742582985
+radius_err_rel_r: 0.0377358483446066
+iou: 0.927801112498581
+success: 1
+
+## Landolt rings (outer → inner)
+r=40.7px : empty_hours=7
+r=34.9px : empty_hours=7
+r=23.4px : empty_hours=0
+r=14.8px : empty_hours=6
+r=7.6px : empty_hours=2

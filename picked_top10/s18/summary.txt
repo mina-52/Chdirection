@@ -1,0 +1,29 @@
+# Summary for s18.png (rank #8)
+rank_score: 3.23606797749979
+original_image: s18.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s18.png
+W: 480
+H: 480
+gt_x: 337
+gt_y: 135
+gt_r: 53
+pr_x: 338
+pr_y: 133
+pr_r: 54
+center_err_px: 2.23606797749979
+radius_err_px: 1.0
+center_err_rel_r: 0.0421899610435816
+radius_err_rel_r: 0.0188679241723033
+iou: 0.942653105388444
+success: 1
+
+## Landolt rings (outer → inner)
+r=49.4px : empty_hours=7
+r=32.6px : empty_hours=6
+r=28.0px : empty_hours=4
+r=23.4px : empty_hours=10
+r=14.2px : empty_hours=7

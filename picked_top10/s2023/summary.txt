@@ -1,0 +1,29 @@
+# Summary for s2023.png (rank #7)
+rank_score: 3.23606797749979
+original_image: s2023.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s2023.png
+W: 640
+H: 640
+gt_x: 313
+gt_y: 183
+gt_r: 119
+pr_x: 314
+pr_y: 185
+pr_r: 118
+center_err_px: 2.23606797749979
+radius_err_px: 1.0
+center_err_rel_r: 0.0187904870479773
+radius_err_rel_r: 0.0084033612739213
+iou: 0.9737219088548662
+success: 1
+
+## Landolt rings (outer → inner)
+r=109.9px : empty_hours=11
+r=99.7px : empty_hours=10
+r=92.8px : empty_hours=10
+r=86.0px : empty_hours=10
+r=24.5px : empty_hours=7

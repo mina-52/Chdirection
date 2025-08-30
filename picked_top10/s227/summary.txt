@@ -1,0 +1,29 @@
+# Summary for s227.png (rank #5)
+rank_score: 2.8284271247461903
+original_image: s227.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s227.png
+W: 480
+H: 480
+gt_x: 130
+gt_y: 119
+gt_r: 53
+pr_x: 128
+pr_y: 117
+pr_r: 53
+center_err_px: 2.8284271247461903
+radius_err_px: 0.0
+center_err_rel_r: 0.053366548516597
+radius_err_rel_r: 0.0
+iou: 0.9345558361699792
+success: 1
+
+## Landolt rings (outer → inner)
+r=37.9px : empty_hours=6
+r=33.4px : empty_hours=6
+r=21.4px : empty_hours=10
+r=15.4px : empty_hours=2
+r=7.9px : empty_hours=11

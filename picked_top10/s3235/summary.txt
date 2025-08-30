@@ -1,0 +1,29 @@
+# Summary for s3235.png (rank #10)
+rank_score: 3.414213562373095
+original_image: s3235.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s3235.png
+W: 480
+H: 480
+gt_x: 313
+gt_y: 61
+gt_r: 124
+pr_x: 314
+pr_y: 60
+pr_r: 122
+center_err_px: 1.4142135623730951
+radius_err_px: 2.0
+center_err_rel_r: 0.0114049479916786
+radius_err_rel_r: 0.0161290321279916
+iou: 0.9672
+success: 1
+
+## Landolt rings (outer → inner)
+r=113.7px : empty_hours=11
+r=57.2px : empty_hours=1
+r=46.6px : empty_hours=6
+r=25.4px : empty_hours=9
+r=18.3px : empty_hours=9

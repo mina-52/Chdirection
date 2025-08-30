@@ -1,0 +1,29 @@
+# Summary for s1537.png (rank #3)
+rank_score: 2.0
+original_image: s1537.png
+overlay_image:  overlay_circles.png
+gaps_image:     gaps_debug.png
+
+## CSV row fields
+path: s1537.png
+W: 640
+H: 640
+gt_x: 280
+gt_y: 277
+gt_r: 65
+pr_x: 280
+pr_y: 278
+pr_r: 64
+center_err_px: 1.0
+radius_err_px: 1.0
+center_err_rel_r: 0.0153846151479289
+radius_err_rel_r: 0.0153846151479289
+iou: 0.9683568145860016
+success: 1
+
+## Landolt rings (outer → inner)
+r=58.2px : empty_hours=5
+r=45.6px : empty_hours=8
+r=38.4px : empty_hours=8
+r=29.4px : empty_hours=5
+r=18.6px : empty_hours=7
