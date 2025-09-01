@@ -3,6 +3,7 @@ rank_score: 3.23606797749979
 original_image: s2023.png
 overlay_image:  overlay_circles.png
 gaps_image:     gaps_debug.png
+hsv_landolt_image: hsv_landolt_c.png
 
 ## CSV row fields
 path: s2023.png
@@ -27,3 +28,11 @@ r=99.7px : empty_hours=10
 r=92.8px : empty_hours=10
 r=86.0px : empty_hours=10
 r=24.5px : empty_hours=7
+
+## HSV Landolt C Analysis
+Target HSV values: []
+Minimum match ratio: 0.6
+HSV tolerance: (360, 100, 40)
+Valid circles found: 0
+
+(HSV条件を満たす円が見つかりませんでした)

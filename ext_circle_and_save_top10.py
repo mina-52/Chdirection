@@ -20,6 +20,8 @@ import re
 import pandas as pd
 import shutil
 from pathlib import Path
+import cv2
+from colorsys import rgb_to_hsv
 
 # ---- Matplotlib backend 選択（保存が主目的なので最後は 'Agg' にフォールバック）----
 for b in ("TkAgg", "Qt5Agg", "MacOSX", "Agg"):
@@ -288,6 +290,278 @@ def band_intensity_profile(gray, cx, cy, r_center, band_px, n_radial=9, n_sample
 
 #内側のみ・最大5本
 
+def rgb_to_hsv_numpy(rgb_array):
+    """RGB配列をHSV配列に変換"""
+    # rgb_array is (H, W, 3) with values 0-255
+    rgb_normalized = rgb_array.astype(np.float32) / 255.0
+    
+    # OpenCVのHSVは H: 0-179, S: 0-255, V: 0-255
+    hsv = cv2.cvtColor(rgb_normalized, cv2.COLOR_RGB2HSV)
+    hsv[:,:,0] *= 2  # H値を0-359に変換
+    hsv[:,:,1] *= 255  # S値を0-255に変換
+    hsv[:,:,2] *= 255  # V値を0-255に変換
+    
+    return hsv.astype(np.uint8)
+
+def check_hsv_match(hsv_pixel, target_hsv_list, tolerance=(360, 100, 40)):
+    """HSV値が黒に近いかをチェック（白との二分類）"""
+    h, s, v = hsv_pixel
+    
+    # V値（明度）で黒か白かを判定
+    # 0-255の範囲で、100を境界として黒と白を分類（適度に緩い黒判定）
+    brightness_threshold = 100
+    
+    if v <= brightness_threshold:
+        # 黒に近い場合はTrue（マーキング対象）
+        return True
+    else:
+        # 白に近い場合はFalse（マーキング対象外）
+        return False
+
+def create_landolt_c_pattern(img, pr_x, pr_y, pr_r, target_hsv_list, 
+                           num_circles=10, min_match_ratio=0.6,
+                           tolerance=(360, 100, 40)):
+    """
+    黒色領域を基にLandolt Cパターンを作成
+    
+    Parameters:
+    - img: 入力画像 (RGB)
+    - pr_x, pr_y, pr_r: 外周円の中心座標と半径
+    - target_hsv_list: 使用しない（黒白二分類のため）
+    - num_circles: 同心円の数
+    - min_match_ratio: 円周上での黒色一致率の最小閾値
+    - tolerance: 使用しない（明度のみで判定のため）
+    
+    Returns:
+    - dict: 結果情報
+    """
+    
+    # 画像をHSVに変換
+    if img.max() > 1.5:  # 0-255 range
+        img_rgb = img.astype(np.uint8)
+    else:  # 0-1 range
+        img_rgb = (img * 255).astype(np.uint8)
+    
+    hsv_img = rgb_to_hsv_numpy(img_rgb)
+    H, W = img.shape[:2]
+    
+    # 同心円の半径を計算（外側から内側へ）
+    min_radius = pr_r * 0.1  # 最小半径は外周円の10%
+    radii = np.linspace(pr_r * 0.9, min_radius, num_circles)
+    
+    valid_circles = []
+    all_circles = []
+    landolt_gaps = {}
+    
+    for radius in radii:
+        # 円周上のサンプル点を取得
+        n_samples = max(360, int(2 * np.pi * radius))  # 円周に応じてサンプル数調整
+        theta = np.linspace(0, 2*np.pi, n_samples, endpoint=False)
+        
+        # 円周上の座標計算
+        x_coords = pr_x + radius * np.cos(theta)
+        y_coords = pr_y + radius * np.sin(theta)
+        
+        # 画像境界内の点のみを取得
+        valid_mask = ((x_coords >= 0) & (x_coords < W) & 
+                     (y_coords >= 0) & (y_coords < H))
+        
+        if not valid_mask.any():
+            continue
+            
+        # バイリニア補間でHSV値を取得
+        x_valid = x_coords[valid_mask]
+        y_valid = y_coords[valid_mask]
+        
+        # 整数座標に変換（最近傍）
+        x_int = np.clip(np.round(x_valid).astype(int), 0, W-1)
+        y_int = np.clip(np.round(y_valid).astype(int), 0, H-1)
+        
+        # HSV値を取得
+        hsv_samples = hsv_img[y_int, x_int]
+        
+        # ターゲットHSV値との一致をチェック
+        matches = []
+        gap_angles = []
+        match_coordinates = []  # 一致した座標を保存
+        
+        for i, hsv_pixel in enumerate(hsv_samples):
+            is_black = check_hsv_match(hsv_pixel, target_hsv_list, tolerance)  # 黒かどうかを判定
+            matches.append(is_black)
+            
+            if is_black:
+                # 黒に一致した座標を保存
+                match_coordinates.append((x_valid[i], y_valid[i]))
+            else:
+                # 白（非黒）の部分はギャップとして記録
+                angle_deg = (theta[valid_mask][i] * 180.0 / np.pi) % 360.0
+                gap_angles.append(angle_deg)
+        
+        # 黒色一致率を計算
+        match_ratio = np.mean(matches) if matches else 0.0
+        
+        # すべての円を記録
+        circle_info = {
+            'radius': radius,
+            'match_ratio': match_ratio,
+            'total_samples': len(matches),
+            'matched_samples': np.sum(matches),
+            'match_coordinates': match_coordinates  # 一致した座標を追加
+        }
+        all_circles.append(circle_info)
+        
+        # 一致率が閾値を超える場合のみ有効な円として保存
+        if match_ratio >= min_match_ratio:
+            valid_circles.append(circle_info)
+            
+            # ギャップの連続区間を検出
+            if gap_angles:
+                gap_intervals = detect_gap_intervals(gap_angles)
+                landolt_gaps[radius] = gap_intervals
+    
+    return {
+        'valid_circles': valid_circles,
+        'all_circles': all_circles,
+        'landolt_gaps': landolt_gaps,
+        'target_hsv_list': target_hsv_list,
+        'tolerance': tolerance,
+        'min_match_ratio': min_match_ratio
+    }
+
+def detect_gap_intervals(gap_angles, min_gap_size=5.0):
+    """
+    ギャップ角度のリストから連続する区間を検出
+    
+    Parameters:
+    - gap_angles: ギャップの角度リスト（度）
+    - min_gap_size: 最小ギャップサイズ（度）
+    
+    Returns:
+    - intervals: [(start_deg, end_deg), ...] のリスト
+    """
+    if not gap_angles:
+        return []
+    
+    # 角度をソート
+    angles = sorted(gap_angles)
+    intervals = []
+    
+    if len(angles) == 1:
+        return [(angles[0], angles[0] + 1.0)]
+    
+    current_start = angles[0]
+    current_end = angles[0]
+    
+    for i in range(1, len(angles)):
+        angle = angles[i]
+        
+        # 連続性をチェック（角度の循環も考慮）
+        if angle - current_end <= min_gap_size or (angle - current_end) > (360 - min_gap_size):
+            current_end = angle
+        else:
+            # 区間を確定
+            if (current_end - current_start) >= min_gap_size or current_start == current_end:
+                intervals.append((current_start, current_end))
+            current_start = angle
+            current_end = angle
+    
+    # 最後の区間
+    if (current_end - current_start) >= min_gap_size or current_start == current_end:
+        intervals.append((current_start, current_end))
+    
+    return intervals
+
+def visualize_landolt_c(img, pr_x, pr_y, pr_r, landolt_result, out_path):
+    """
+    Landolt Cパターンの可視化
+    """
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.imshow(img)
+    ax.set_title("Landolt C Pattern with Black/White Classification")
+    ax.axis("off")
+    ax.set_aspect("equal")
+    
+    # 外周円を描画（線を細く）
+    ax.add_patch(Circle((pr_x, pr_y), pr_r, fill=False, linewidth=1.0, 
+                       edgecolor="blue", alpha=0.7, zorder=2))
+    
+    # すべての円を描画
+    all_circles = landolt_result['all_circles']
+    valid_circles = landolt_result['valid_circles']
+    landolt_gaps = landolt_result['landolt_gaps']
+    min_match_ratio = landolt_result['min_match_ratio']
+    
+    # 有効な円の半径のセットを作成
+    valid_radii = {circle['radius'] for circle in valid_circles}
+    
+    for circle_info in all_circles:
+        radius = circle_info['radius']
+        match_ratio = circle_info['match_ratio']
+        
+        # 円を描画（マッチ率に応じて色を変更、線を細く）
+        if match_ratio >= min_match_ratio:
+            # 有効な円（閾値以上）
+            color = 'green' if match_ratio >= 0.8 else 'orange'
+            alpha = 0.8
+            linewidth = 0.8
+        else:
+            # 無効な円（閾値未満）
+            color = 'gray'
+            alpha = 0.4
+            linewidth = 0.5
+        
+        ax.add_patch(Circle((pr_x, pr_y), radius, fill=False, linewidth=linewidth,
+                           edgecolor=color, alpha=alpha, zorder=3))
+        
+        # ギャップがある場合は赤でマーク（有効な円のみ）
+        if radius in valid_radii and radius in landolt_gaps:
+            for start_deg, end_deg in landolt_gaps[radius]:
+                # ギャップ区間を赤い弧で描画
+                start_rad = np.radians(start_deg)
+                end_rad = np.radians(end_deg)
+                
+                # 弧の描画用の角度配列
+                gap_theta = np.linspace(start_rad, end_rad, 20)
+                gap_x = pr_x + radius * np.cos(gap_theta)
+                gap_y = pr_y + radius * np.sin(gap_theta)
+                
+                ax.plot(gap_x, gap_y, 'r-', linewidth=1.5, alpha=0.8, zorder=4)
+        
+        # 黒色ピクセルをマーク
+        match_coords = circle_info.get('match_coordinates', [])
+        if match_coords:
+            # 黒色ピクセルを明るい緑色の小さな点でマーク
+            match_x = [coord[0] for coord in match_coords]
+            match_y = [coord[1] for coord in match_coords]
+            ax.scatter(match_x, match_y, c='lime', s=0.5, alpha=0.8, zorder=7)
+        
+        # マッチ率をテキストで表示（有効な円のみ）
+        if radius in valid_radii:
+            text_x = pr_x + radius * 1.1
+            text_y = pr_y
+            ax.text(text_x, text_y, f'{match_ratio:.2f}', fontsize=8, 
+                   color='white', bbox=dict(boxstyle="round,pad=0.2", 
+                   facecolor='black', alpha=0.7), zorder=5)
+    
+    # 中心点を描画
+    ax.plot([pr_x], [pr_y], "o", markersize=4, color="blue", zorder=6)
+    
+    # 凡例
+    legend_elements = [
+        plt.Line2D([0], [0], color='blue', lw=1.0, label='Outer Circle'),
+        plt.Line2D([0], [0], color='green', lw=0.8, label='Valid Circle (>80%)'),
+        plt.Line2D([0], [0], color='orange', lw=0.8, label='Valid Circle (60-80%)'),
+        plt.Line2D([0], [0], color='gray', lw=0.5, label='Invalid Circle (<60%)'),
+        plt.Line2D([0], [0], color='red', lw=1.5, label='HSV Gaps'),
+        plt.Line2D([0], [0], marker='o', color='lime', lw=0, markersize=3, label='Black Pixel Points')
+    ]
+    ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
+    
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=120, bbox_inches="tight", pad_inches=0)
+    plt.close(fig)
+    
+    return out_path
 
 
 # =====================
@@ -361,6 +635,23 @@ def main():
             **GAP_PARAMS
         )
         
+        # HSV Landolt C パターン作成
+        img = mpimg.imread(img_path)
+        target_hsv_list = []  # 黒白二分類では不要（関数内で明度のみで判定）
+        
+        landolt_result = create_landolt_c_pattern(
+            img=img,
+            pr_x=pr_x, pr_y=pr_y, pr_r=pr_r,
+            target_hsv_list=target_hsv_list,
+            num_circles=20,
+            min_match_ratio=0.6,
+            tolerance=(360, 100, 40)
+        )
+        
+        # HSV Landolt C 可視化
+        hsv_landolt_path = out_dir / "hsv_landolt_c.png"
+        visualize_landolt_c(img, pr_x, pr_y, pr_r, landolt_result, str(hsv_landolt_path))
+        
         
         
         
@@ -371,7 +662,8 @@ def main():
             f.write(f"rank_score: {row['_rank_score']}\n")
             f.write(f"original_image: {copied_orig.name}\n")
             f.write(f"overlay_image:  {overlay_path.name}\n")
-            f.write(f"gaps_image:     {gaps_img_path.name}\n\n")
+            f.write(f"gaps_image:     {gaps_img_path.name}\n")
+            f.write(f"hsv_landolt_image: {hsv_landolt_path.name}\n\n")
 
             # CSVの主要情報
             def w(key):
@@ -396,6 +688,32 @@ def main():
                     hours = result["gap_hours"].get(r, [])
                     hours_str = ",".join(str(h) for h in hours) if hours else "-"
                     f.write(f"r={r:.1f}px : empty_hours={hours_str}\n")
+            
+            f.write("\n")
+            
+            # HSV Landolt C 結果
+            f.write("## HSV Landolt C Analysis\n")
+            f.write(f"Target HSV values: {target_hsv_list}\n")
+            f.write(f"Minimum match ratio: {landolt_result['min_match_ratio']}\n")
+            f.write(f"HSV tolerance: {landolt_result['tolerance']}\n")
+            f.write(f"Valid circles found: {len(landolt_result['valid_circles'])}\n\n")
+            
+            if landolt_result['valid_circles']:
+                f.write("Valid HSV circles (radius : match_ratio : gaps):\n")
+                for circle_info in sorted(landolt_result['valid_circles'], 
+                                        key=lambda x: x['radius'], reverse=True):
+                    radius = circle_info['radius']
+                    match_ratio = circle_info['match_ratio']
+                    gaps = landolt_result['landolt_gaps'].get(radius, [])
+                    gaps_str = f"{len(gaps)} gaps" if gaps else "no gaps"
+                    f.write(f"r={radius:.1f}px : match={match_ratio:.3f} : {gaps_str}\n")
+                    
+                    # ギャップの詳細を記録
+                    for i, (start_deg, end_deg) in enumerate(gaps):
+                        gap_width = (end_deg - start_deg) % 360.0
+                        f.write(f"  gap_{i+1}: {start_deg:.1f}° - {end_deg:.1f}° (width: {gap_width:.1f}°)\n")
+            else:
+                f.write("(HSV条件を満たす円が見つかりませんでした)\n")
 
         print(f"[OK] {out_dir} に保存完了")
 

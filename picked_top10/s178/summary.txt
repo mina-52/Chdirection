@@ -3,6 +3,7 @@ rank_score: 3.414213562373095
 original_image: s178.png
 overlay_image:  overlay_circles.png
 gaps_image:     gaps_debug.png
+hsv_landolt_image: hsv_landolt_c.png
 
 ## CSV row fields
 path: s178.png
@@ -22,8 +23,43 @@ iou: 0.927801112498581
 success: 1
 
 ## Landolt rings (outer → inner)
-r=40.7px : empty_hours=7
-r=34.9px : empty_hours=7
+r=39.2px : empty_hours=7
+r=33.5px : empty_hours=7
 r=23.4px : empty_hours=0
 r=14.8px : empty_hours=6
 r=7.6px : empty_hours=2
+
+## HSV Landolt C Analysis
+Target HSV values: []
+Minimum match ratio: 0.6
+HSV tolerance: (360, 100, 40)
+Valid circles found: 8
+
+Valid HSV circles (radius : match_ratio : gaps):
+r=33.0px : match=0.903 : 4 gaps
+  gap_1: 48.0° - 71.0° (width: 23.0°)
+  gap_2: 146.0° - 146.0° (width: 0.0°)
+  gap_3: 241.0° - 249.0° (width: 8.0°)
+  gap_4: 300.0° - 300.0° (width: 0.0°)
+r=30.9px : match=0.900 : 3 gaps
+  gap_1: 47.0° - 72.0° (width: 25.0°)
+  gap_2: 218.0° - 224.0° (width: 6.0°)
+  gap_3: 255.0° - 255.0° (width: 0.0°)
+r=28.7px : match=0.881 : 2 gaps
+  gap_1: 46.0° - 74.0° (width: 28.0°)
+  gap_2: 221.0° - 231.0° (width: 10.0°)
+r=26.6px : match=0.889 : 3 gaps
+  gap_1: 46.0° - 75.0° (width: 29.0°)
+  gap_2: 225.0° - 234.0° (width: 9.0°)
+  gap_3: 247.0° - 247.0° (width: 0.0°)
+r=24.4px : match=0.892 : 2 gaps
+  gap_1: 45.0° - 76.0° (width: 31.0°)
+  gap_2: 284.0° - 290.0° (width: 6.0°)
+r=22.3px : match=0.622 : 3 gaps
+  gap_1: 43.0° - 78.0° (width: 35.0°)
+  gap_2: 114.0° - 224.0° (width: 110.0°)
+  gap_3: 236.0° - 236.0° (width: 0.0°)
+r=11.5px : match=0.911 : 1 gaps
+  gap_1: 173.0° - 202.0° (width: 29.0°)
+r=9.4px : match=0.756 : 1 gaps
+  gap_1: 116.0° - 201.0° (width: 85.0°)
